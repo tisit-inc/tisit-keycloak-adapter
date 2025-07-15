@@ -25,10 +25,26 @@ from fastapi_keycloak_middleware.schemas.keycloak_configuration import (
 )
 from fastapi_keycloak_middleware.schemas.match_strategy import MatchStrategy
 from fastapi_keycloak_middleware.setup import setup_keycloak_middleware
+from fastapi_keycloak_middleware.setup_di import (
+    setup_keycloak_di,
+    create_global_auth_dependency,
+    create_role_based_dependencies,
+)
+from fastapi_keycloak_middleware.dependency_factory import KeycloakDependencyFactory
+from fastapi_keycloak_middleware.enhanced_backend import (
+    EnhancedKeycloakBackend,
+    EnhancedFastApiUser,
+)
+from fastapi_keycloak_middleware.schemas.validation_strategy import (
+    ValidationStrategy,
+    ValidationConfig,
+    AuthMetrics,
+)
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 __all__ = [
+    # Legacy middleware approach
     AuthorizationResult.__name__,
     KeycloakMiddleware.__name__,
     KeycloakConfiguration.__name__,
@@ -42,4 +58,15 @@ __all__ = [
     require_permission.__name__,
     setup_keycloak_middleware.__name__,
     strip_request.__name__,
+    
+    # New DI-first approach
+    setup_keycloak_di.__name__,
+    create_global_auth_dependency.__name__,
+    create_role_based_dependencies.__name__,
+    KeycloakDependencyFactory.__name__,
+    EnhancedKeycloakBackend.__name__,
+    EnhancedFastApiUser.__name__,
+    ValidationStrategy.__name__,
+    ValidationConfig.__name__,
+    AuthMetrics.__name__,
 ]
