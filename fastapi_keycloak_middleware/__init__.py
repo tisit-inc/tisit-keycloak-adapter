@@ -24,15 +24,25 @@ from fastapi_keycloak_middleware.schemas.keycloak_configuration import (
     KeycloakConfiguration,
 )
 from fastapi_keycloak_middleware.schemas.match_strategy import MatchStrategy
+# Legacy middleware approach (backwards compatibility)
 from fastapi_keycloak_middleware.setup import setup_keycloak_middleware
-from fastapi_keycloak_middleware.setup_di import (
-    setup_keycloak_di,
-    create_global_auth_dependency,
-    create_role_based_dependencies,
+
+# New DI-first approach - main API
+from fastapi_keycloak_middleware.setup_keycloak import (
+    setup_keycloak,
+    create_keycloak_singleton,
+    setup_swagger_only,
 )
-from fastapi_keycloak_middleware.dependency_factory import KeycloakDependencyFactory
-from fastapi_keycloak_middleware.enhanced_backend import (
-    EnhancedKeycloakBackend,
+from fastapi_keycloak_middleware.dependencies import (
+    create_auth_dependency,
+    create_optional_auth_dependency,
+    create_admin_dependency,
+    create_role_based_dependencies,
+    create_global_auth_dependency,
+    get_keycloak_backend_dependency,
+)
+from fastapi_keycloak_middleware.keycloak_backend import (
+    KeycloakBackend,
     EnhancedFastApiUser,
 )
 from fastapi_keycloak_middleware.schemas.validation_strategy import (
@@ -44,29 +54,34 @@ from fastapi_keycloak_middleware.schemas.validation_strategy import (
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 __all__ = [
-    # Legacy middleware approach
-    AuthorizationResult.__name__,
-    KeycloakMiddleware.__name__,
-    KeycloakConfiguration.__name__,
-    AuthorizationMethod.__name__,
-    MatchStrategy.__name__,
-    FastApiUser.__name__,
-    CheckPermissions.__name__,
-    get_auth.__name__,
-    get_user.__name__,
-    get_authorization_result.__name__,
-    require_permission.__name__,
-    setup_keycloak_middleware.__name__,
-    strip_request.__name__,
+    # Legacy middleware approach (backwards compatibility)
+    "AuthorizationResult",
+    "KeycloakMiddleware", 
+    "KeycloakConfiguration",
+    "AuthorizationMethod",
+    "MatchStrategy",
+    "FastApiUser",
+    "CheckPermissions",
+    "get_auth",
+    "get_user", 
+    "get_authorization_result",
+    "require_permission",
+    "setup_keycloak_middleware",
+    "strip_request",
     
-    # New DI-first approach
-    setup_keycloak_di.__name__,
-    create_global_auth_dependency.__name__,
-    create_role_based_dependencies.__name__,
-    KeycloakDependencyFactory.__name__,
-    EnhancedKeycloakBackend.__name__,
-    EnhancedFastApiUser.__name__,
-    ValidationStrategy.__name__,
-    ValidationConfig.__name__,
-    AuthMetrics.__name__,
+    # New DI-first approach - main API
+    "setup_keycloak",
+    "create_keycloak_singleton",
+    "setup_swagger_only",
+    "create_auth_dependency",
+    "create_optional_auth_dependency", 
+    "create_admin_dependency",
+    "create_role_based_dependencies",
+    "create_global_auth_dependency",
+    "get_keycloak_backend_dependency",
+    "KeycloakBackend",
+    "EnhancedFastApiUser",
+    "ValidationStrategy",
+    "ValidationConfig", 
+    "AuthMetrics",
 ]
