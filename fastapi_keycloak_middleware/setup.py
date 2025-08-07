@@ -10,7 +10,6 @@ import typing
 
 from fastapi import Depends, FastAPI
 from fastapi.security import OpenIdConnect
-
 from fastapi_keycloak_middleware.middleware import KeycloakMiddleware
 from fastapi_keycloak_middleware.schemas.exception_response import ExceptionResponse
 from fastapi_keycloak_middleware.schemas.keycloak_configuration import (
@@ -28,6 +27,7 @@ def setup_keycloak_middleware(  # pylint: disable=too-many-arguments
     | None = None,
     scope_mapper: typing.Callable[[typing.List[str]], typing.Awaitable[typing.List[str]]]
     | None = None,
+    validation_config: typing.Optional["ValidationConfig"] = None,
     add_exception_response: bool = True,
     add_swagger_auth: bool = False,
     swagger_openId_base_url: str | None = None,
@@ -103,6 +103,7 @@ def setup_keycloak_middleware(  # pylint: disable=too-many-arguments
         user_mapper=user_mapper,
         scope_mapper=scope_mapper,
         exclude_patterns=exclude_patterns,
+        validation_config=validation_config,
     )
 
     # Add exception responses if requested
