@@ -138,7 +138,7 @@ The middleware provides a configuration option to exclude certain paths from aut
 This would make sure you can access the docs, alternate docs, OpenAPI schema and health check endpoint without authentication.
 
 .. warning::
-    At the moment only the paths are checked, not the request method or other criteria. See issue `#3 <https://github.com/waza-ari/fastapi-keycloak-middleware/issues/3>`_ for more details.
+    At the moment only the paths are checked, not the request method or other criteria. See issue `#3 <https://github.com/tisit/tisit-keycloak-adapter/issues/3>`_ for more details.
 
 **Technical Details:**
 

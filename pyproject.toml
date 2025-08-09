@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "fastapi-keycloak-middleware"
+name = "tisit-keycloak-adapter"
 version = "1.3.0"
 description = "Middleware for FastAPI to authenticate a user against keycloak"
 authors = ["Daniel Herrmann <daniel.herrmann1@gmail.com>"]
 readme = "README.md"
-packages = [{ include = "fastapi_keycloak_middleware" }]
+packages = [{ include = "tisit_keycloak_adapter" }]
 
 [tool.poetry.dependencies]
 python = "^3.10"

@@ -4,7 +4,7 @@ This module contains a Dependency that results the authorization result
 
 from warnings import warn
 
-from fastapi_keycloak_middleware.schemas.authorization_result import AuthorizationResult
+from tisit_keycloak_adapter.schemas.authorization_result import AuthorizationResult
 
 
 async def get_authorization_result(

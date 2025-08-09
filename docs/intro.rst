@@ -26,13 +26,13 @@ Install the package using poetry:
 
 .. code-block:: bash
 
-    poetry add fastapi-keycloak-middleware
+    poetry add tisit-keycloak-adapter
 
 or pip:
 
 .. code-block:: bash
 
-    pip install fastapi-keycloak-middleware
+    pip install tisit-keycloak-adapter
 
 Features
 ^^^^^^^^
