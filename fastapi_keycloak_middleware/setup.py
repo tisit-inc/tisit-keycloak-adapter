@@ -10,6 +10,7 @@ import typing
 
 from fastapi import Depends, FastAPI
 from fastapi.security import OpenIdConnect
+
 from fastapi_keycloak_middleware.middleware import KeycloakMiddleware
 from fastapi_keycloak_middleware.schemas.exception_response import ExceptionResponse
 from fastapi_keycloak_middleware.schemas.keycloak_configuration import (

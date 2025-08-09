@@ -11,6 +11,15 @@ from datetime import datetime
 
 import keycloak
 from cachetools import TTLCache
+from jwcrypto import jwk
+from keycloak import KeycloakOpenID
+from starlette.authentication import (
+    AuthenticationBackend,
+    AuthenticationError,
+    BaseUser,
+)
+from starlette.requests import HTTPConnection
+
 from fastapi_keycloak_middleware.exceptions import (
     AuthClaimMissing,
     AuthHeaderMissing,
@@ -30,14 +39,6 @@ from fastapi_keycloak_middleware.schemas.validation_strategy import (
     ValidationConfig,
     ValidationStrategy,
 )
-from jwcrypto import jwk
-from keycloak import KeycloakOpenID
-from starlette.authentication import (
-    AuthenticationBackend,
-    AuthenticationError,
-    BaseUser,
-)
-from starlette.requests import HTTPConnection
 
 log = logging.getLogger(__name__)
 

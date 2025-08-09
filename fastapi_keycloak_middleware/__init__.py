@@ -56,25 +56,25 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 __all__ = [
     # Global authentication approach - middleware
     "AuthorizationResult",
-    "KeycloakMiddleware", 
+    "KeycloakMiddleware",
     "KeycloakConfiguration",
     "AuthorizationMethod",
     "MatchStrategy",
     "FastApiUser",
     "CheckPermissions",
     "get_auth",
-    "get_user", 
+    "get_user",
     "get_authorization_result",
     "require_permission",
     "setup_keycloak_middleware",
     "strip_request",
-    
+
     # Selective authentication approach - DI dependencies
     "setup_keycloak",
     "create_keycloak_singleton",
     "setup_swagger_only",
     "create_auth_dependency",
-    "create_optional_auth_dependency", 
+    "create_optional_auth_dependency",
     "create_admin_dependency",
     "create_role_based_dependencies",
     "create_global_auth_dependency",
@@ -82,6 +82,6 @@ __all__ = [
     "KeycloakBackend",
     "EnhancedFastApiUser",
     "ValidationStrategy",
-    "ValidationConfig", 
+    "ValidationConfig",
     "AuthMetrics",
 ]

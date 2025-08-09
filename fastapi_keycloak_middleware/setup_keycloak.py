@@ -4,10 +4,10 @@ Setup functions for the new simplified Keycloak DI-first architecture.
 
 import logging
 from collections.abc import Callable
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import Depends, FastAPI
-from fastapi.security import OpenIdConnect
+from fastapi.security import OAuth2AuthorizationCodeBearer, OpenIdConnect
 
 from fastapi_keycloak_middleware.dependencies import (
     create_admin_dependency,
@@ -17,25 +17,79 @@ from fastapi_keycloak_middleware.dependencies import (
 from fastapi_keycloak_middleware.keycloak_backend import KeycloakBackend
 from fastapi_keycloak_middleware.schemas.exception_response import ExceptionResponse
 from fastapi_keycloak_middleware.schemas.keycloak_configuration import KeycloakConfiguration
-from fastapi_keycloak_middleware.schemas.validation_strategy import (
-    ValidationConfig,
-    ValidationStrategy,
-)
+from fastapi_keycloak_middleware.schemas.validation_strategy import ValidationConfig
 
 log = logging.getLogger(__name__)
+
+
+def _normalize_base_url(url: str) -> str:
+    """Ensure no trailing slash to avoid double slashes when composing URLs."""
+    return url.rstrip("/")
+
+
+def _compose_urls(base_url: str, realm: str) -> dict[str, str]:
+    base = _normalize_base_url(base_url)
+    realm_path = f"{base}/realms/{realm}"
+    return {
+        "auth": f"{realm_path}/protocol/openid-connect/auth",
+        "token": f"{realm_path}/protocol/openid-connect/token",
+        "discovery": f"{realm_path}/.well-known/openid-configuration",
+    }
+
+
+def _configure_swagger_ui_init(
+    app: FastAPI,
+    client_id: str,
+    scopes: list[str],
+    app_title: str,
+    pkce: bool,
+) -> None:
+    app.swagger_ui_init_oauth = {
+        "clientId": client_id,
+        "scopes": scopes,
+        "appName": app_title,
+        "usePkceWithAuthorizationCodeGrant": pkce,
+    }
+
+
+def _attach_security_scheme(
+    app: FastAPI,
+    mode: str,
+    urls: dict[str, str],
+    scheme_name: str,
+    scopes: list[str],
+) -> None:
+    if mode == "oauth2":
+        oauth2_scheme = OAuth2AuthorizationCodeBearer(
+            authorizationUrl=urls["auth"],
+            tokenUrl=urls["token"],
+            scheme_name=scheme_name,
+            scopes={scope: scope for scope in scopes},
+            auto_error=False,
+        )
+        app.router.dependencies.append(Depends(oauth2_scheme))
+    else:
+        security_scheme = OpenIdConnect(
+            openIdConnectUrl=urls["discovery"],
+            scheme_name=scheme_name,
+            auto_error=False,
+        )
+        app.router.dependencies.append(Depends(security_scheme))
 
 
 def setup_keycloak(
     app: FastAPI,
     keycloak_configuration: KeycloakConfiguration,
-    validation_config: Optional[ValidationConfig] = None,
-    user_mapper: Optional[Callable[[dict[str, Any]], Any]] = None,
+    validation_config: ValidationConfig | None = None,
+    user_mapper: Callable[[dict[str, Any]], Any] | None = None,
     add_exception_response: bool = True,
     add_swagger_auth: bool = True,
-    swagger_openid_base_url: Optional[str] = None,
-    swagger_auth_scopes: Optional[list[str]] = None,
+    swagger_openid_base_url: str | None = None,
+    swagger_auth_scopes: list[str] | None = None,
     swagger_auth_pkce: bool = True,
     swagger_scheme_name: str = "keycloak-openid",
+    swagger_security_type: str = "openid",  # "openid" (default) or "oauth2"
+    swagger_oauth2_flows: list[str] | None = None,  # e.g. ["authorization_code"]
     add_metrics_endpoint: bool = False,
     metrics_endpoint_path: str = "/auth/metrics",
     require_admin_for_metrics: bool = True,
@@ -61,14 +115,14 @@ def setup_keycloak(
     :param require_admin_for_metrics: Whether metrics require admin access
     :return: KeycloakBackend instance (singleton)
     """
-    
+
     # Create the singleton backend
     backend = KeycloakBackend(
         keycloak_configuration=keycloak_configuration,
         user_mapper=user_mapper,
         validation_config=validation_config,
     )
-    
+
     # Add exception responses if requested
     if add_exception_response:
         router = app.router if isinstance(app, FastAPI) else app
@@ -94,38 +148,38 @@ def setup_keycloak(
 
     # Add OpenAPI schema for Swagger
     if add_swagger_auth:
-        suffix = ".well-known/openid-configuration"
-        openid_base_url = swagger_openid_base_url or keycloak_configuration.url
-        security_scheme = OpenIdConnect(
-            openIdConnectUrl=f"{openid_base_url}/realms/{keycloak_configuration.realm}/{suffix}",
-            scheme_name=swagger_scheme_name,
-            auto_error=False,
+        openid_base_url = _normalize_base_url(
+            swagger_openid_base_url or keycloak_configuration.url
         )
         client_id = (
             keycloak_configuration.swagger_client_id
             if keycloak_configuration.swagger_client_id
             else keycloak_configuration.client_id
         )
-        scopes = swagger_auth_scopes if swagger_auth_scopes else ["openid", "profile"]
-        swagger_ui_init_oauth = {
-            "clientId": client_id,
-            "scopes": scopes,
-            "appName": app.title,
-            "usePkceWithAuthorizationCodeGrant": swagger_auth_pkce,
-        }
-        app.swagger_ui_init_oauth = swagger_ui_init_oauth
-        
-        log.info("Swagger OpenID Connect configured for DI-based authentication")
-    
+        scopes_list = swagger_auth_scopes if swagger_auth_scopes else ["openid", "profile"]
+        _configure_swagger_ui_init(app, client_id, scopes_list, app.title, swagger_auth_pkce)
+        urls = _compose_urls(openid_base_url, keycloak_configuration.realm)
+        requested_oauth2_flows = swagger_oauth2_flows or ["authorization_code"]
+        mode = (
+            "oauth2"
+            if (swagger_security_type == "oauth2" and requested_oauth2_flows)
+            else "openid"
+        )
+        _attach_security_scheme(app, mode, urls, swagger_scheme_name, scopes_list)
+        log.info(
+            "Swagger %s configured for DI-based authentication",
+            "OAuth2 (authorization_code)" if mode == "oauth2" else "OpenID Connect",
+        )
+
     # Add metrics endpoint if requested
     if add_metrics_endpoint:
         backend_dep = get_keycloak_backend_dependency(backend)
-        
+
         if require_admin_for_metrics:
             metrics_dependency = create_admin_dependency(backend)
         else:
             metrics_dependency = create_auth_dependency(backend)
-        
+
         @app.get(
             metrics_endpoint_path,
             dependencies=[Depends(metrics_dependency)],
@@ -138,20 +192,20 @@ def setup_keycloak(
         ):
             """Get current authentication metrics."""
             return backend.get_metrics().model_dump()
-        
+
         log.info(f"Added authentication metrics endpoint at {metrics_endpoint_path}")
-    
+
     validation_strategy = backend.validation_config.strategy
     log.info(f"Keycloak setup completed with strategy: {validation_strategy}")
-    
+
     return backend
 
 
 # Convenience functions for common patterns
 def create_keycloak_singleton(
     keycloak_configuration: KeycloakConfiguration,
-    validation_config: Optional[ValidationConfig] = None,
-    user_mapper: Optional[Callable[[dict[str, Any]], Any]] = None,
+    validation_config: ValidationConfig | None = None,
+    user_mapper: Callable[[dict[str, Any]], Any] | None = None,
 ) -> KeycloakBackend:
     """
     Create a KeycloakBackend singleton without FastAPI setup.
@@ -174,10 +228,12 @@ def create_keycloak_singleton(
 def setup_swagger_only(
     app: FastAPI,
     keycloak_configuration: KeycloakConfiguration,
-    swagger_openid_base_url: Optional[str] = None,
-    swagger_auth_scopes: Optional[list[str]] = None,
+    swagger_openid_base_url: str | None = None,
+    swagger_auth_scopes: list[str] | None = None,
     swagger_auth_pkce: bool = True,
     swagger_scheme_name: str = "keycloak-openid",
+    swagger_security_type: str = "openid",  # "openid" (default) or "oauth2"
+    swagger_oauth2_flows: list[str] | None = None,  # e.g. ["authorization_code"]
 ) -> None:
     """
     Setup only Swagger OpenID Connect configuration without creating a backend.
@@ -191,25 +247,23 @@ def setup_swagger_only(
     :param swagger_auth_pkce: Whether to use PKCE
     :param swagger_scheme_name: Security scheme name
     """
-    suffix = ".well-known/openid-configuration"
-    openid_base_url = swagger_openid_base_url or keycloak_configuration.url
-    security_scheme = OpenIdConnect(
-        openIdConnectUrl=f"{openid_base_url}/realms/{keycloak_configuration.realm}/{suffix}",
-        scheme_name=swagger_scheme_name,
-        auto_error=False,
+    openid_base_url = _normalize_base_url(
+        swagger_openid_base_url or keycloak_configuration.url
     )
     client_id = (
         keycloak_configuration.swagger_client_id
         if keycloak_configuration.swagger_client_id
         else keycloak_configuration.client_id
     )
-    scopes = swagger_auth_scopes if swagger_auth_scopes else ["openid", "profile"]
-    swagger_ui_init_oauth = {
-        "clientId": client_id,
-        "scopes": scopes,
-        "appName": app.title,
-        "usePkceWithAuthorizationCodeGrant": swagger_auth_pkce,
-    }
-    app.swagger_ui_init_oauth = swagger_ui_init_oauth
-    
-    log.info("Swagger OpenID Connect configured")
+    scopes_list = swagger_auth_scopes if swagger_auth_scopes else ["openid", "profile"]
+    _configure_swagger_ui_init(app, client_id, scopes_list, app.title, swagger_auth_pkce)
+    urls = _compose_urls(openid_base_url, keycloak_configuration.realm)
+    requested_oauth2_flows = swagger_oauth2_flows or ["authorization_code"]
+    mode = (
+        "oauth2" if (swagger_security_type == "oauth2" and requested_oauth2_flows) else "openid"
+    )
+    _attach_security_scheme(app, mode, urls, swagger_scheme_name, scopes_list)
+    log.info(
+        "Swagger %s configured",
+        "OAuth2 (authorization_code)" if mode == "oauth2" else "OpenID Connect",
+    )

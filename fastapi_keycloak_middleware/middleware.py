@@ -9,6 +9,11 @@ import logging
 import re
 import typing
 
+from jwcrypto.common import JWException
+from starlette.requests import HTTPConnection
+from starlette.responses import JSONResponse
+from starlette.types import ASGIApp, Receive, Scope, Send
+
 from fastapi_keycloak_middleware.exceptions import (
     AuthHeaderMissing,
     AuthInvalidToken,
@@ -19,10 +24,6 @@ from fastapi_keycloak_middleware.schemas.keycloak_configuration import (
     KeycloakConfiguration,
 )
 from fastapi_keycloak_middleware.schemas.validation_strategy import ValidationConfig
-from jwcrypto.common import JWException
-from starlette.requests import HTTPConnection
-from starlette.responses import JSONResponse
-from starlette.types import ASGIApp, Receive, Scope, Send
 
 log = logging.getLogger(__name__)
 

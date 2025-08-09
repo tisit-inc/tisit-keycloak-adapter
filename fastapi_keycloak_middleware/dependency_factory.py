@@ -33,19 +33,19 @@ def create_auth_dependency(
     :return: Authentication dependency function
     """
     security = HTTPBearer(auto_error=True)
-    
+
     async def auth_dependency(
         credentials: HTTPAuthorizationCredentials = Depends(security),
     ) -> EnhancedFastApiUser:
         try:
             # Validate token using the backend
             user = await backend.validate_token_with_strategy(credentials.credentials, strategy)
-            
+
             # Check role requirements
             if require_roles:
                 user_roles = set(user.roles)
                 required_roles = set(require_roles)
-                
+
                 if require_all_roles:
                     if not required_roles.issubset(user_roles):
                         missing_roles = required_roles - user_roles
@@ -59,12 +59,12 @@ def create_auth_dependency(
                             status_code=403,
                             detail=f"None of required roles found: {require_roles}",
                         )
-            
+
             # Check scope requirements
             if require_scopes:
                 user_scopes = set(user.scopes)
                 required_scopes = set(require_scopes)
-                
+
                 if require_all_scopes:
                     if not required_scopes.issubset(user_scopes):
                         missing_scopes = required_scopes - user_scopes
@@ -78,16 +78,16 @@ def create_auth_dependency(
                             status_code=403,
                             detail=f"None of required scopes found: {require_scopes}",
                         )
-            
+
             return user
-            
+
         except AuthenticationError:
             raise HTTPException(status_code=401, detail="Invalid token")
         except HTTPException:
             raise
-        except Exception as e:
+        except Exception:
             raise HTTPException(status_code=500, detail="Authentication error")
-    
+
     return auth_dependency
 
 
@@ -103,18 +103,18 @@ def create_optional_auth_dependency(
     :return: Optional authentication dependency function
     """
     security = HTTPBearer(auto_error=False)
-    
+
     async def optional_auth_dependency(
         credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     ) -> Optional[EnhancedFastApiUser]:
         if not credentials or not credentials.credentials:
             return None
-        
+
         try:
             return await backend.validate_token_with_strategy(credentials.credentials, strategy)
         except Exception:
             return None
-    
+
     return optional_auth_dependency
 
 
@@ -132,7 +132,7 @@ def create_admin_dependency(
     :return: Admin authentication dependency function
     """
     admin_roles = admin_roles or ["admin", "administrator"]
-    
+
     return create_auth_dependency(
         backend=backend,
         strategy=strategy,
@@ -170,7 +170,7 @@ def create_role_based_dependencies(
     :return: Dict of dependency name to dependency function
     """
     dependencies = {}
-    
+
     for dep_name, required_roles in roles_config.items():
         dependencies[dep_name] = create_auth_dependency(
             backend=backend,
@@ -178,7 +178,7 @@ def create_role_based_dependencies(
             require_roles=required_roles,
             require_all_roles=False,  # Any of the roles is sufficient
         )
-    
+
     return dependencies
 
 
@@ -238,5 +238,5 @@ def get_keycloak_backend_dependency(backend: KeycloakBackend) -> Callable:
     """
     async def backend_dependency() -> KeycloakBackend:
         return backend
-    
+
     return backend_dependency
