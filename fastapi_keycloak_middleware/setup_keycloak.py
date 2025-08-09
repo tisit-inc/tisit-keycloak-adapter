@@ -176,7 +176,10 @@ def setup_keycloak(
         backend_dep = get_keycloak_backend_dependency(backend)
 
         if require_admin_for_metrics:
-            metrics_dependency = create_admin_dependency(backend)
+            if getattr(backend.keycloak_configuration, "enforce_admin_roles", True):
+                metrics_dependency = create_admin_dependency(backend)
+            else:
+                metrics_dependency = create_auth_dependency(backend)
         else:
             metrics_dependency = create_auth_dependency(backend)
 

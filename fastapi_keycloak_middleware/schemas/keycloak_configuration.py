@@ -162,3 +162,18 @@ class KeycloakConfiguration(BaseModel):  # pylint: disable=too-few-public-method
         title="WebSocket Cookie Name",
         description="The name of the cookie that contains the access token.",
     )
+
+    # Admin enforcement
+    enforce_admin_roles: bool = Field(
+        default=True,
+        title="Enforce Admin Roles",
+        description=(
+            "Whether admin-protected dependencies/endpoints should require admin roles. "
+            "If False, any authenticated user passes admin checks."
+        ),
+    )
+    admin_roles: list[str] = Field(
+        default=["admin", "administrator"],
+        title="Admin Roles",
+        description="Role names that grant admin access when enforcement is enabled.",
+    )

@@ -10,6 +10,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from starlette.authentication import AuthenticationError
 
 from fastapi_keycloak_middleware.keycloak_backend import EnhancedFastApiUser, KeycloakBackend
+from fastapi_keycloak_middleware.schemas.keycloak_configuration import KeycloakConfiguration
 from fastapi_keycloak_middleware.schemas.validation_strategy import ValidationStrategy
 
 
@@ -131,7 +132,16 @@ def create_admin_dependency(
     :param strategy: Validation strategy to use (default: JWT_WITH_FALLBACK for security)
     :return: Admin authentication dependency function
     """
-    admin_roles = admin_roles or ["admin", "administrator"]
+    config: KeycloakConfiguration = backend.keycloak_configuration
+
+    # If enforcement is disabled, just require authentication without role checks
+    if not getattr(config, "enforce_admin_roles", True):
+        return create_auth_dependency(
+            backend=backend,
+            strategy=strategy,
+        )
+
+    admin_roles = admin_roles or getattr(config, "admin_roles", ["admin", "administrator"])
 
     return create_auth_dependency(
         backend=backend,
