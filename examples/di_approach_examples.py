@@ -3,14 +3,15 @@ Examples demonstrating the new DI-first approach for Keycloak authentication.
 """
 
 from fastapi import Depends, FastAPI
-from fastapi_keycloak_middleware import (
+
+from tisit_keycloak_adapter import (
+    EnhancedFastApiUser,
     KeycloakConfiguration,
-    ValidationStrategy,
     ValidationConfig,
-    setup_keycloak_di,
+    ValidationStrategy,
     create_global_auth_dependency,
     create_role_based_dependencies,
-    EnhancedFastApiUser,
+    setup_keycloak_di,
 )
 
 app = FastAPI(title="Keycloak DI Examples")
@@ -50,11 +51,7 @@ global_auth = create_global_auth_dependency(
     require_roles=["user"],  # All routes require 'user' role
 )
 
-app.include_router(
-    api_router,
-    prefix="/api",
-    dependencies=[Depends(global_auth)]
-)
+app.include_router(api_router, prefix="/api", dependencies=[Depends(global_auth)])
 
 # Example 2: Role-based dependencies
 role_dependencies = create_role_based_dependencies(
@@ -63,7 +60,7 @@ role_dependencies = create_role_based_dependencies(
         "admin": ["admin", "super_admin"],
         "user": ["user", "admin", "super_admin"],
         "moderator": ["moderator", "admin"],
-    }
+    },
 )
 
 # Example 3: Different validation strategies for different endpoints
@@ -78,6 +75,7 @@ low_security_auth = dependency_factory.create_auth_dependency(
 )
 
 optional_auth = dependency_factory.create_optional_auth_dependency()
+
 
 # Route examples
 @app.get("/public")
@@ -120,9 +118,7 @@ async def fast_endpoint():
 
 
 @app.get("/optional-auth")
-async def optional_auth_endpoint(
-    user: EnhancedFastApiUser | None = Depends(optional_auth)
-):
+async def optional_auth_endpoint(user: EnhancedFastApiUser | None = Depends(optional_auth)):
     """Endpoint with optional authentication."""
     if user:
         return {
@@ -140,7 +136,7 @@ async def optional_auth_endpoint(
 async def user_profile(
     user: EnhancedFastApiUser = Depends(
         dependency_factory.create_auth_dependency(require_roles=["user"])
-    )
+    ),
 ):
     """User profile endpoint showing all available user information."""
     return {
@@ -160,9 +156,7 @@ async def user_profile(
 @app.get("/role-check/{required_role}")
 async def role_check(
     required_role: str,
-    user: EnhancedFastApiUser = Depends(
-        dependency_factory.create_auth_dependency()
-    )
+    user: EnhancedFastApiUser = Depends(dependency_factory.create_auth_dependency()),
 ):
     """Dynamic role checking endpoint."""
     has_role = user.has_role(required_role)
@@ -196,4 +190,5 @@ async def premium_endpoint():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -19,12 +19,12 @@ import starlette
 from fastapi import HTTPException
 from starlette.requests import Request
 
-from fastapi_keycloak_middleware.decorators.strip_request import strip_request
-from fastapi_keycloak_middleware.schemas.authorization_methods import (
+from tisit_keycloak_adapter.decorators.strip_request import strip_request
+from tisit_keycloak_adapter.schemas.authorization_methods import (
     AuthorizationMethod,
 )
-from fastapi_keycloak_middleware.schemas.authorization_result import AuthorizationResult
-from fastapi_keycloak_middleware.schemas.match_strategy import MatchStrategy
+from tisit_keycloak_adapter.schemas.authorization_result import AuthorizationResult
+from tisit_keycloak_adapter.schemas.match_strategy import MatchStrategy
 
 log = logging.getLogger(__name__)
 

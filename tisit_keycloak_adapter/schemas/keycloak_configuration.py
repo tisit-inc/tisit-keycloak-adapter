@@ -7,7 +7,7 @@ from typing import Union
 from jwcrypto import jwk
 from pydantic import BaseModel, ConfigDict, Field
 
-from fastapi_keycloak_middleware.schemas.authorization_methods import (
+from tisit_keycloak_adapter.schemas.authorization_methods import (
     AuthorizationMethod,
 )
 

@@ -1,14 +1,14 @@
-[![Documentation Status](https://readthedocs.org/projects/fastapi-keycloak-middleware/badge/?version=latest)](https://fastapi-keycloak-middleware.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/tisit-keycloak-adapter/badge/?version=latest)](https://tisit-keycloak-adapter.readthedocs.io/en/latest/?badge=latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
-![GitHub issues](https://img.shields.io/github/issues/waza-ari/fastapi-keycloak-middleware)
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/waza-ari/fastapi-keycloak-middleware)
-![GitHub top language](https://img.shields.io/github/languages/top/waza-ari/fastapi-keycloak-middleware)
-[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/waza-ari/fastapi-keycloak-middleware/development.svg)](https://results.pre-commit.ci/latest/github/waza-ari/fastapi-keycloak-middleware/development)
+![GitHub issues](https://img.shields.io/github/issues/tisit/tisit-keycloak-adapter)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/tisit/tisit-keycloak-adapter)
+![GitHub top language](https://img.shields.io/github/languages/top/tisit/tisit-keycloak-adapter)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/tisit/tisit-keycloak-adapter/development.svg)](https://results.pre-commit.ci/latest/github/tisit/tisit-keycloak-adapter/development)
 
 
-# FastAPI Keycloak Middleware
+# TISIT Keycloak Adapter
 
-**Full documentation** is [available at Read The Docs](https://fastapi-keycloak-middleware.readthedocs.io/en/latest/)
+**Full documentation** is [available at Read The Docs](https://tisit-keycloak-adapter.readthedocs.io/en/latest/)
 
 This package provides a middleware for [FastAPI](http://fastapi.tiangolo.com)  that
 simplifies integrating with [Keycloak](http://keycloak.org) for
@@ -44,13 +44,13 @@ There is a clear separation between the authentication and authorization:
 Install the package using poetry:
 
 ```bash
-poetry add fastapi-keycloak-middleware
+poetry add tisit-keycloak-adapter
 ```
 
 or `pip`:
 
 ```bash
-pip install fastapi-keycloak-middleware
+pip install tisit-keycloak-adapter
 ```
 
 ## Features

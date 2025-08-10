@@ -9,17 +9,16 @@ from typing import Any, Optional
 from fastapi import Depends, FastAPI
 from fastapi.security import OpenIdConnect
 
-from fastapi_keycloak_middleware.dependencies import (
+from tisit_keycloak_adapter.dependencies import (
     create_admin_dependency,
     create_auth_dependency,
     get_keycloak_backend_dependency,
 )
-from fastapi_keycloak_middleware.keycloak_backend import KeycloakBackend
-from fastapi_keycloak_middleware.schemas.exception_response import ExceptionResponse
-from fastapi_keycloak_middleware.schemas.keycloak_configuration import KeycloakConfiguration
-from fastapi_keycloak_middleware.schemas.validation_strategy import (
+from tisit_keycloak_adapter.keycloak_backend import KeycloakBackend
+from tisit_keycloak_adapter.schemas.exception_response import ExceptionResponse
+from tisit_keycloak_adapter.schemas.keycloak_configuration import KeycloakConfiguration
+from tisit_keycloak_adapter.schemas.validation_strategy import (
     ValidationConfig,
-    ValidationStrategy,
 )
 
 log = logging.getLogger(__name__)
@@ -42,10 +41,10 @@ def setup_keycloak(
 ) -> KeycloakBackend:
     """
     Setup Keycloak authentication for FastAPI with DI-first architecture.
-    
+
     This function creates a singleton KeycloakBackend instance and optionally configures
     FastAPI for Swagger integration and metrics endpoints.
-    
+
     :param app: The FastAPI app instance
     :param keycloak_configuration: Keycloak configuration object
     :param validation_config: Validation strategy configuration
@@ -61,14 +60,14 @@ def setup_keycloak(
     :param require_admin_for_metrics: Whether metrics require admin access
     :return: KeycloakBackend instance (singleton)
     """
-    
+
     # Create the singleton backend
     backend = KeycloakBackend(
         keycloak_configuration=keycloak_configuration,
         user_mapper=user_mapper,
         validation_config=validation_config,
     )
-    
+
     # Add exception responses if requested
     if add_exception_response:
         router = app.router if isinstance(app, FastAPI) else app
@@ -96,7 +95,7 @@ def setup_keycloak(
     if add_swagger_auth:
         suffix = ".well-known/openid-configuration"
         openid_base_url = swagger_openid_base_url or keycloak_configuration.url
-        security_scheme = OpenIdConnect(
+        OpenIdConnect(
             openIdConnectUrl=f"{openid_base_url}/realms/{keycloak_configuration.realm}/{suffix}",
             scheme_name=swagger_scheme_name,
             auto_error=False,
@@ -114,18 +113,18 @@ def setup_keycloak(
             "usePkceWithAuthorizationCodeGrant": swagger_auth_pkce,
         }
         app.swagger_ui_init_oauth = swagger_ui_init_oauth
-        
+
         log.info("Swagger OpenID Connect configured for DI-based authentication")
-    
+
     # Add metrics endpoint if requested
     if add_metrics_endpoint:
         backend_dep = get_keycloak_backend_dependency(backend)
-        
+
         if require_admin_for_metrics:
             metrics_dependency = create_admin_dependency(backend)
         else:
             metrics_dependency = create_auth_dependency(backend)
-        
+
         @app.get(
             metrics_endpoint_path,
             dependencies=[Depends(metrics_dependency)],
@@ -133,17 +132,15 @@ def setup_keycloak(
             summary="Get authentication metrics",
             response_model=dict,
         )
-        async def get_auth_metrics(
-            backend: KeycloakBackend = Depends(backend_dep)
-        ):
+        async def get_auth_metrics(backend: KeycloakBackend = Depends(backend_dep)):
             """Get current authentication metrics."""
             return backend.get_metrics().model_dump()
-        
+
         log.info(f"Added authentication metrics endpoint at {metrics_endpoint_path}")
-    
+
     validation_strategy = backend.validation_config.strategy
     log.info(f"Keycloak setup completed with strategy: {validation_strategy}")
-    
+
     return backend
 
 
@@ -155,12 +152,12 @@ def create_keycloak_singleton(
 ) -> KeycloakBackend:
     """
     Create a KeycloakBackend singleton without FastAPI setup.
-    
+
     Use this when you want to create the backend instance separately
     from FastAPI configuration.
-    
+
     :param keycloak_configuration: Keycloak configuration
-    :param validation_config: Validation strategy configuration  
+    :param validation_config: Validation strategy configuration
     :param user_mapper: Custom user mapping function
     :return: KeycloakBackend instance
     """
@@ -181,9 +178,9 @@ def setup_swagger_only(
 ) -> None:
     """
     Setup only Swagger OpenID Connect configuration without creating a backend.
-    
+
     Use this when you already have a backend instance and only want to configure Swagger.
-    
+
     :param app: FastAPI app instance
     :param keycloak_configuration: Keycloak configuration
     :param swagger_openid_base_url: Base URL for OpenID Connect
@@ -193,7 +190,7 @@ def setup_swagger_only(
     """
     suffix = ".well-known/openid-configuration"
     openid_base_url = swagger_openid_base_url or keycloak_configuration.url
-    security_scheme = OpenIdConnect(
+    OpenIdConnect(
         openIdConnectUrl=f"{openid_base_url}/realms/{keycloak_configuration.realm}/{suffix}",
         scheme_name=swagger_scheme_name,
         auto_error=False,
@@ -211,5 +208,5 @@ def setup_swagger_only(
         "usePkceWithAuthorizationCodeGrant": swagger_auth_pkce,
     }
     app.swagger_ui_init_oauth = swagger_ui_init_oauth
-    
+
     log.info("Swagger OpenID Connect configured")

@@ -1,7 +1,7 @@
 API Documentation
 =================
 
-.. module:: fastapi_keycloak_middleware
+.. module:: tisit_keycloak_adapter
 
 This part of the documentation covers all the interfaces of Requests. For
 parts where Requests depends on external libraries, we document the most
