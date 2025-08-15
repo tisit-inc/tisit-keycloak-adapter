@@ -9,7 +9,7 @@ import sys
 # Insert Requests' path into the system.
 sys.path.insert(0, os.path.abspath(".."))
 
-import fastapi_keycloak_middleware  # noqa: F401,E402
+import tisit_keycloak_adapter  # noqa: F401,E402
 
 # Configuration file for the Sphinx documentation builder.
 #
@@ -19,7 +19,7 @@ import fastapi_keycloak_middleware  # noqa: F401,E402
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "FastAPI Keycloak Middleware"
+project = "Tisit Keycloak Adapter"
 copyright = "2024, Daniel Herrmann"
 author = "Daniel Herrmann"
 release = "1.3.0"

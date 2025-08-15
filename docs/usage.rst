@@ -11,7 +11,7 @@ This is a very basic example on how to add the Middleware to a FastAPI applicati
 .. code-block:: python
 
    from fastapi import FastAPI
-   from fastapi_keycloak_middleware import KeycloakConfiguration, setup_keycloak_middleware
+   from tisit_keycloak_adapter import KeycloakConfiguration, setup_keycloak_middleware
 
    # Set up Keycloak
     keycloak_config = KeycloakConfiguration(
@@ -210,7 +210,7 @@ This package provides a very simple dependency to retrieve the user object from 
 
 .. code-block:: python
 
-    from fastapi_keycloak_middleware import get_user
+    from tisit_keycloak_adapter import get_user
 
     @app.get("/")
     async def root(user: User = Depends(get_user)):
@@ -301,7 +301,7 @@ separate client is then configured using the :code:`swagger_client_id`  paramete
 
 There are four more parameters that can be used to customize the Swagger UI integration:
 
-* :code:`swagger_openId_base_url` - The base URL for the OpenID Connect configuration that will be used by the Swagger UI. It is explained in this `Github Issue <https://github.com/waza-ari/fastapi-keycloak-middleware/issues/65>`_. This parameter allows you to specify a different base URL than the one in keycloak_configuration.url. This is particularly useful in Docker container scenarios where the internal and external URLs differ. Defaults to using the keycloak_configuration.url.
+* :code:`swagger_openId_base_url` - The base URL for the OpenID Connect configuration that will be used by the Swagger UI. It is explained in this `Github Issue <https://github.com/waza-ari/tisit-keycloak-adapter/issues/65>`_. This parameter allows you to specify a different base URL than the one in keycloak_configuration.url. This is particularly useful in Docker container scenarios where the internal and external URLs differ. Defaults to using the keycloak_configuration.url.
 * :code:`swagger_auth_scopes` - The scopes that should be selected by default when hitting the Authorize button in Swagger UI. Defaults to :code:`['openid', 'profile']`
 * :code:`swagger_auth_pkce` - Whether to use PKCE for the Swagger UI client. Defaults to :code:`True`. It is recommended to use Authorization Code Flow with PKCE for public clients instead of implicit flow. In Keycloak, this flow is called "Standard flow"
 * :code:`swagger_scheme_name` - The name of the OpenAPI security scheme. Usually there is no need to change this.
@@ -316,7 +316,7 @@ attribute, which must be the True or False bool or the str path to the CA bundle
 .. code-block:: python
 
     from fastapi import FastAPI
-    from fastapi_keycloak_middleware import KeycloakConfiguration, setup_keycloak_middleware
+    from tisit_keycloak_adapter import KeycloakConfiguration, setup_keycloak_middleware
 
     # Set up Keycloak connection
     keycloak_config = KeycloakConfiguration(

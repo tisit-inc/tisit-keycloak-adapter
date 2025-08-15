@@ -31,7 +31,7 @@ Passing an `X-User` header would tell the overriden dependency which user to inj
     # in order to be able to override it. If you use the built-in one, import that one instead.
     from your-library import get_user
     # or
-    from fastapi_keycloak_middleware import get_user
+    from tisit_keycloak_adapter import get_user
 
     async def mocked_get_user(request: Request):
         """
@@ -45,7 +45,7 @@ Passing an `X-User` header would tell the overriden dependency which user to inj
     def app(session_mocker):
 
         # Mock auth middleware, effectively remove it
-        session_mocker.patch("fastapi_keycloak_middleware.setup_keycloak_middleware")
+        session_mocker.patch("tisit_keycloak_adapter.setup_keycloak_middleware")
 
         # Its important to import the app after the middleware has been mocked
         from backend.main import app as backend_app
@@ -118,7 +118,7 @@ or rely on database queries to fetch the permissions, if you store your RBAC inf
     def app(session_mocker):
 
         # Mock auth middleware, effectively remove it
-        session_mocker.patch("fastapi_keycloak_middleware.setup_keycloak_middleware")
+        session_mocker.patch("tisit_keycloak_adapter.setup_keycloak_middleware")
 
         # Its important to import the app after the middleware has been mocked
         from backend.main import app as backend_app

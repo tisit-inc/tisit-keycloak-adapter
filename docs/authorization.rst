@@ -41,7 +41,7 @@ To enable authorization, simply pass the chosen method to the middleware initial
 .. code-block:: python
 
     from fastapi import FastAPI
-    from fastapi_keycloak_middleware import KeycloakConfiguration, AuthorizationMethod, setup_keycloak_middleware
+    from tisit_keycloak_adapter import KeycloakConfiguration, AuthorizationMethod, setup_keycloak_middleware
 
     # Set up Keycloak
     keycloak_config = KeycloakConfiguration(
@@ -68,7 +68,7 @@ Then, on the endpoint you want to protect, add a dependency specifying which per
 .. code-block:: python
 
     from fastapi import Depends
-    from fastapi_keycloak_middleware import CheckPermissions
+    from tisit_keycloak_adapter import CheckPermissions
 
     @app.get("/protected", dependencies=[Depends(CheckPermissions("protected"))])
     def protected():
@@ -110,7 +110,7 @@ In the examples above, the content of the claims is used unmodified. You can add
     :emphasize-lines: 29
 
     from fastapi import FastAPI
-    from fastapi_keycloak_middleware import KeycloakConfiguration, AuthorizationMethod, setup_keycloak_middleware
+    from tisit_keycloak_adapter import KeycloakConfiguration, AuthorizationMethod, setup_keycloak_middleware
 
     async def scope_mapper(claim_auth: typing.List[str]) -> typing.List[str]:
         """
@@ -151,7 +151,7 @@ You can build more complex authorization rules by combining multiple permissions
     :emphasize-lines: 4
 
     from fastapi import Depends
-    from fastapi_keycloak_middleware import CheckPermissions
+    from tisit_keycloak_adapter import CheckPermissions
 
     @app.get("/view_user", dependencies=[Depends(CheckPermissions(["user:view", "user:view_own"]))])
     def view_user():
@@ -163,7 +163,7 @@ By default, the decorator will now enforce that the user bas both permissions. Y
     :emphasize-lines: 2,4
 
     from fastapi import Depends
-    from fastapi_keycloak_middleware import CheckPermissions, MatchStrategy
+    from tisit_keycloak_adapter import CheckPermissions, MatchStrategy
 
     @app.get("/view_user", dependencies=[Depends()])
     def view_user():
@@ -181,7 +181,7 @@ When used as a parameter, the result of the authorization evaluation is passed t
     :emphasize-lines: 2,5
 
     from fastapi import Depends
-    from fastapi_keycloak_middleware import AuthorizationResult, CheckPermissions, MatchStrategy
+    from tisit_keycloak_adapter import AuthorizationResult, CheckPermissions, MatchStrategy
 
     @app.get("/view_user")
     def view_user(authorization_result: AuthorizationResult = Depends(CheckPermissions(["user:view", "user:view_own"], match_strategy=MatchStrategy.OR))):
