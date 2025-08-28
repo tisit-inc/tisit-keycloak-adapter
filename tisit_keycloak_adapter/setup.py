@@ -11,9 +11,9 @@ import typing
 from fastapi import Depends, FastAPI
 from fastapi.security import OpenIdConnect
 
-from tisit_keycloak_adapter.middleware import KeycloakMiddleware
-from tisit_keycloak_adapter.schemas.exception_response import ExceptionResponse
-from tisit_keycloak_adapter.schemas.keycloak_configuration import (
+from fastapi_keycloak_middleware.middleware import KeycloakMiddleware
+from fastapi_keycloak_middleware.schemas.exception_response import ExceptionResponse
+from fastapi_keycloak_middleware.schemas.keycloak_configuration import (
     KeycloakConfiguration,
 )
 

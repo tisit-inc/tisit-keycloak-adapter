@@ -14,16 +14,16 @@ from starlette.requests import HTTPConnection
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from tisit_keycloak_adapter.exceptions import (
+from fastapi_keycloak_middleware.exceptions import (
     AuthHeaderMissing,
     AuthInvalidToken,
     AuthUserError,
 )
-from tisit_keycloak_adapter.keycloak_backend import KeycloakBackend
-from tisit_keycloak_adapter.schemas.keycloak_configuration import (
+from fastapi_keycloak_middleware.keycloak_backend import KeycloakBackend
+from fastapi_keycloak_middleware.schemas.keycloak_configuration import (
     KeycloakConfiguration,
 )
-from tisit_keycloak_adapter.schemas.validation_strategy import ValidationConfig
+from fastapi_keycloak_middleware.schemas.validation_strategy import ValidationConfig
 
 log = logging.getLogger(__name__)
 

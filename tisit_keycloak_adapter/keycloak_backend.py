@@ -20,21 +20,21 @@ from starlette.authentication import (
 )
 from starlette.requests import HTTPConnection
 
-from tisit_keycloak_adapter.exceptions import (
+from fastapi_keycloak_middleware.exceptions import (
     AuthClaimMissing,
     AuthHeaderMissing,
     AuthInvalidToken,
     AuthKeycloakError,
     AuthUserError,
 )
-from tisit_keycloak_adapter.fast_api_user import EnhancedFastApiUser, FastApiUser
-from tisit_keycloak_adapter.schemas.authorization_methods import (
+from fastapi_keycloak_middleware.fast_api_user import EnhancedFastApiUser, FastApiUser
+from fastapi_keycloak_middleware.schemas.authorization_methods import (
     AuthorizationMethod,
 )
-from tisit_keycloak_adapter.schemas.keycloak_configuration import (
+from fastapi_keycloak_middleware.schemas.keycloak_configuration import (
     KeycloakConfiguration,
 )
-from tisit_keycloak_adapter.schemas.validation_strategy import (
+from fastapi_keycloak_middleware.schemas.validation_strategy import (
     AuthMetrics,
     ValidationConfig,
     ValidationStrategy,
