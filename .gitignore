@@ -12,3 +12,4 @@ mksp_backend/test.py
 docs/_build
 .ruff_cache
 .mypy_cache
+build/

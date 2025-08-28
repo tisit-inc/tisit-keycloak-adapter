@@ -16,6 +16,7 @@ from tisit_keycloak_adapter.schemas.exception_response import ExceptionResponse
 from tisit_keycloak_adapter.schemas.keycloak_configuration import (
     KeycloakConfiguration,
 )
+from tisit_keycloak_adapter.schemas.validation_strategy import ValidationConfig
 
 log = logging.getLogger(__name__)
 

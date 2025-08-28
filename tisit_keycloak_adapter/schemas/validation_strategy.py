@@ -29,7 +29,8 @@ class ValidationConfig(BaseModel):
 
     :param strategy: The validation strategy to use
     :param fallback_timeout_seconds: Timeout for fallback requests (default: 5.0)
-    :param periodic_check_interval: Interval for periodic introspection checks in seconds (default: 300)
+    :param periodic_check_interval: Interval for periodic introspection checks in seconds
+        (default: 300)
     :param max_retries: Maximum number of retries for failed requests (default: 3)
     :param cache_introspection_results: Whether to cache introspection results (default: True)
     :param cache_ttl_seconds: TTL for cached introspection results in seconds (default: 60)

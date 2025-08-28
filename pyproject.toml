@@ -28,6 +28,12 @@ build-backend = "poetry.core.masonry.api"
 target-version = "py310"
 line-length = 100
 fix = true
+extend-exclude = [
+    "build",
+    "dist",
+    "**/build/**",
+    "**/dist/**",
+]
 
 [tool.ruff.lint.isort]
 case-sensitive = true
