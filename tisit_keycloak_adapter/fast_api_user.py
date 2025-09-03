@@ -6,6 +6,7 @@ the user based on the token claims
 """
 
 import typing
+from uuid import UUID
 
 from starlette.authentication import BaseUser
 
@@ -49,7 +50,7 @@ class EnhancedFastApiUser(FastApiUser):
         self,
         first_name: str = "",
         last_name: str = "",
-        user_id: str = "",
+        user_id: typing.Any = None,
         email: str = "",
         username: str = "",
         roles: list[str] | None = None,
@@ -155,3 +156,34 @@ class EnhancedFastApiUser(FastApiUser):
     def has_all_scopes(self, scopes: list[str]) -> bool:
         """Check if user has all of the specified scopes."""
         return all(scope in self.scopes for scope in scopes)
+
+    @property
+    def user_uuid(self) -> UUID | None:
+        """UUID representation for database comparison"""
+        match self.user_id:
+            case None:
+                return None
+            case UUID() as uuid_val:
+                return uuid_val
+            case str() as str_val:
+                try:
+                    return UUID(str_val)
+                except ValueError:
+                    return None
+            case _:
+                return None
+
+    def matches_user_id(self, other_user_id: typing.Any) -> bool:
+        """Check if this user matches the given user ID (supports UUID and string comparison)."""
+        if other_user_id is None or self.user_id is None:
+            return other_user_id == self.user_id
+        # try UUID comparison first if both can be converted to UUID
+        self_uuid = self.user_uuid
+        if self_uuid:
+            try:
+                other_uuid = UUID(str(other_user_id)) if not isinstance(other_user_id, UUID) else other_user_id
+                return self_uuid == other_uuid
+            except ValueError:
+                pass
+        # fallback to string comparison
+        return str(self.user_id) == str(other_user_id)
