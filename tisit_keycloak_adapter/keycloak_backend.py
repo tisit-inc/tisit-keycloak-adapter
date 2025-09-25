@@ -4,7 +4,10 @@ This module contains the Keycloak backend.
 It is used by the middleware to perform the actual authentication.
 """
 
+import asyncio
+import functools
 import logging
+import threading
 import time
 import typing
 from datetime import datetime
@@ -12,7 +15,7 @@ from datetime import datetime
 import keycloak
 from cachetools import TTLCache
 from jwcrypto import jwk
-from keycloak import KeycloakOpenID
+from keycloak import KeycloakAdmin, KeycloakOpenID
 from starlette.authentication import (
     AuthenticationBackend,
     AuthenticationError,
@@ -21,6 +24,7 @@ from starlette.authentication import (
 from starlette.requests import HTTPConnection
 
 from tisit_keycloak_adapter.exceptions import (
+    AuthAdminConfigurationError,
     AuthClaimMissing,
     AuthHeaderMissing,
     AuthInvalidToken,
@@ -67,6 +71,9 @@ class KeycloakBackend(AuthenticationBackend):
         self._validation_times: list[float] = []
         self.cache = TTLCache(maxsize=1000, ttl=self.validation_config.cache_ttl_seconds)
         self._last_periodic_checks: dict[str, datetime] = {}
+        self._keycloak_admin: KeycloakAdmin | None = None
+        self._admin_client_lock = threading.Lock()
+        self._client_uuid: str | None = None
 
     def _get_keycloak_openid(self) -> KeycloakOpenID:
         """
@@ -419,6 +426,77 @@ class KeycloakBackend(AuthenticationBackend):
         self.metrics = AuthMetrics()
         self._validation_times.clear()
 
+    # === ADMIN CLIENT UTILITIES ===
+
+    def _admin_credentials_provided(self) -> bool:
+        """Check whether admin-capable credentials were configured."""
+        return bool(self.keycloak_configuration.client_secret)
+
+    def _get_admin_client(self) -> KeycloakAdmin:
+        """Get or create the KeycloakAdmin client for management operations."""
+        if not self._admin_credentials_provided():
+            raise AuthAdminConfigurationError(
+                "Keycloak client_secret is required for admin operations."
+            )
+
+        if self._keycloak_admin is not None:
+            return self._keycloak_admin
+
+        with self._admin_client_lock:
+            if self._keycloak_admin is None:
+                secret = self.keycloak_configuration.client_secret
+                if not secret:
+                    raise AuthAdminConfigurationError(
+                        "Keycloak client_secret is required for admin operations."
+                    )
+
+                self._keycloak_admin = KeycloakAdmin(
+                    server_url=self.keycloak_configuration.url,
+                    realm_name=self.keycloak_configuration.realm,
+                    client_id=self.keycloak_configuration.client_id,
+                    client_secret_key=str(secret),
+                    verify=self.keycloak_configuration.verify,
+                )
+
+        return self._keycloak_admin
+
+    async def _admin_call(self, method_name: str, *args, **kwargs):
+        """Invoke a KeycloakAdmin method, preferring async variants when available."""
+        admin_client = self._get_admin_client()
+
+        async_method = getattr(admin_client, f"a_{method_name}", None)
+        if callable(async_method):
+            return await async_method(*args, **kwargs)
+
+        sync_method = getattr(admin_client, method_name, None)
+        if callable(sync_method):
+            return await asyncio.to_thread(
+                functools.partial(sync_method, *args, **kwargs)
+            )
+
+        raise AttributeError(f"KeycloakAdmin has no method '{method_name}' or 'a_{method_name}'.")
+
+    async def _get_client_uuid(self) -> str:
+        """Resolve and cache the internal Keycloak client identifier."""
+        if self._client_uuid:
+            return self._client_uuid
+
+        client_identifier = self.keycloak_configuration.client_id
+
+        try:
+            client_uuid = await self._admin_call("get_client_id", client_identifier)
+        except keycloak.exceptions.KeycloakGetError as exc:
+            log.error(f"Failed to resolve client id '{client_identifier}': {exc.error_message}")
+            raise AuthKeycloakError from exc
+
+        if not client_uuid:
+            msg = f"Client '{client_identifier}' not found in Keycloak."
+            log.error(msg)
+            raise AuthKeycloakError(msg)
+
+        self._client_uuid = client_uuid
+        return client_uuid
+
     # === USER MANAGEMENT METHODS ===
 
     async def get_user_details(self, user_id: str) -> dict[str, typing.Any]:
@@ -429,8 +507,7 @@ class KeycloakBackend(AuthenticationBackend):
         :return: Dictionary containing user information
         """
         try:
-            # Note: This requires admin privileges
-            user_info = await self.keycloak_openid.a_get_user_info(user_id)
+            user_info = await self._admin_call("get_user", user_id)
             return user_info
         except keycloak.exceptions.KeycloakGetError as exc:
             log.error(f"Failed to get user details: {exc.error_message}")
@@ -444,13 +521,49 @@ class KeycloakBackend(AuthenticationBackend):
         :param attributes: Dictionary of attributes to update
         :return: True if successful
         """
+        if not attributes:
+            return True
+
+        normalized: dict[str, typing.Any] = {}
+        for key, value in attributes.items():
+            if value is None:
+                normalized[key] = None
+            elif isinstance(value, list):
+                normalized[key] = [str(item) for item in value]
+            elif isinstance(value, tuple | set):
+                normalized[key] = [str(item) for item in value]
+            else:
+                normalized[key] = [str(value)]
+
+        payload = {"attributes": normalized}
+
         try:
-            # Note: This requires admin privileges
-            await self.keycloak_openid.a_update_user(user_id, attributes)
+            await self._admin_call(
+                "update_user", user_id, payload=payload, brief_representation=True
+            )
             return True
         except keycloak.exceptions.KeycloakPostError as exc:
             log.error(f"Failed to update user attributes: {exc.error_message}")
             raise AuthKeycloakError from exc
+
+    async def set_user_attribute(
+        self,
+        user_id: str,
+        attribute: str | dict[str, typing.Any],
+        value: typing.Any | None = None,
+    ) -> bool:
+        """
+        Convenience helper to update one or more user attributes.
+
+        Accepts either a mapping of attributes or a single attribute name/value pair.
+        """
+
+        if isinstance(attribute, dict):
+            attributes = attribute
+        else:
+            attributes = {attribute: value}
+
+        return await self.update_user_attributes(user_id, attributes)
 
     async def get_user_roles(self, user_id: str) -> list[str]:
         """
@@ -460,26 +573,38 @@ class KeycloakBackend(AuthenticationBackend):
         :return: List of role names
         """
         try:
-            # Get realm roles
-            realm_roles = await self.keycloak_openid.a_get_realm_roles_of_user(user_id)
+            roles: list[str] = []
 
-            # Get client roles for this client
-            client_roles = await self.keycloak_openid.a_get_client_roles_of_user(
-                user_id, self.keycloak_configuration.client_id
-            )
-
-            all_roles = []
-
-            # Add realm roles
+            realm_roles = await self._admin_call("get_realm_roles_of_user", user_id)
             if realm_roles:
-                all_roles.extend([role["name"] for role in realm_roles])
+                roles.extend(role["name"] for role in realm_roles if "name" in role)
 
-            # Add client roles with prefix
-            if client_roles:
-                client_id = self.keycloak_configuration.client_id
-                all_roles.extend([f"{client_id}:{role['name']}" for role in client_roles])
+            try:
+                client_uuid = await self._get_client_uuid()
+            except AuthKeycloakError:
+                client_uuid = None
 
-            return all_roles
+            if client_uuid:
+                client_roles = await self._admin_call(
+                    "get_client_roles_of_user", user_id, client_uuid
+                )
+                if client_roles:
+                    client_id = self.keycloak_configuration.client_id
+                    roles.extend(
+                        f"{client_id}:{role['name']}"
+                        for role in client_roles
+                        if "name" in role
+                    )
+
+            # Preserve order while removing duplicates
+            seen = set()
+            unique_roles = []
+            for role in roles:
+                if role not in seen:
+                    seen.add(role)
+                    unique_roles.append(role)
+
+            return unique_roles
 
         except keycloak.exceptions.KeycloakGetError as exc:
             log.error(f"Failed to get user roles: {exc.error_message}")
@@ -498,14 +623,22 @@ class KeycloakBackend(AuthenticationBackend):
         """
         try:
             if is_realm_role:
-                await self.keycloak_openid.a_assign_realm_roles(user_id, [role_name])
+                role_representation = await self._admin_call("get_realm_role", role_name)
+                await self._admin_call("assign_realm_roles", user_id, [role_representation])
             else:
-                await self.keycloak_openid.a_assign_client_roles(
-                    user_id, self.keycloak_configuration.client_id, [role_name]
+                client_uuid = await self._get_client_uuid()
+                role_representation = await self._admin_call(
+                    "get_client_role", client_uuid, role_name
+                )
+                await self._admin_call(
+                    "assign_client_role", user_id, client_uuid, [role_representation]
                 )
             return True
-        except keycloak.exceptions.KeycloakPostError as exc:
-            log.error(f"Failed to assign role: {exc.error_message}")
+        except (
+            keycloak.exceptions.KeycloakGetError,
+            keycloak.exceptions.KeycloakPostError,
+        ) as exc:
+            log.error(f"Failed to assign role '{role_name}': {exc.error_message}")
             raise AuthKeycloakError from exc
 
     async def remove_role_from_user(
@@ -521,14 +654,24 @@ class KeycloakBackend(AuthenticationBackend):
         """
         try:
             if is_realm_role:
-                await self.keycloak_openid.a_delete_realm_roles(user_id, [role_name])
+                role_representation = await self._admin_call("get_realm_role", role_name)
+                await self._admin_call(
+                    "delete_realm_roles_of_user", user_id, [role_representation]
+                )
             else:
-                await self.keycloak_openid.a_delete_client_roles(
-                    user_id, self.keycloak_configuration.client_id, [role_name]
+                client_uuid = await self._get_client_uuid()
+                role_representation = await self._admin_call(
+                    "get_client_role", client_uuid, role_name
+                )
+                await self._admin_call(
+                    "delete_client_roles_of_user", user_id, client_uuid, [role_representation]
                 )
             return True
-        except keycloak.exceptions.KeycloakPostError as exc:
-            log.error(f"Failed to remove role: {exc.error_message}")
+        except (
+            keycloak.exceptions.KeycloakGetError,
+            keycloak.exceptions.KeycloakPostError,
+        ) as exc:
+            log.error(f"Failed to remove role '{role_name}': {exc.error_message}")
             raise AuthKeycloakError from exc
 
     async def get_user_sessions(self, user_id: str) -> list[dict[str, typing.Any]]:
@@ -539,7 +682,7 @@ class KeycloakBackend(AuthenticationBackend):
         :return: List of session information
         """
         try:
-            sessions = await self.keycloak_openid.a_get_user_sessions(user_id)
+            sessions = await self._admin_call("get_sessions", user_id)
             return sessions or []
         except keycloak.exceptions.KeycloakGetError as exc:
             log.error(f"Failed to get user sessions: {exc.error_message}")
@@ -553,7 +696,7 @@ class KeycloakBackend(AuthenticationBackend):
         :return: True if successful
         """
         try:
-            await self.keycloak_openid.a_logout_user(user_id)
+            await self._admin_call("user_logout", user_id)
             return True
         except keycloak.exceptions.KeycloakPostError as exc:
             log.error(f"Failed to logout user: {exc.error_message}")
@@ -568,7 +711,11 @@ class KeycloakBackend(AuthenticationBackend):
         :return: List of user events
         """
         try:
-            events = await self.keycloak_openid.a_get_user_events(user_id, limit)
+            query: dict[str, typing.Any] = {"user": user_id}
+            if limit:
+                query["max"] = limit
+
+            events = await self._admin_call("get_events", query)
             return events or []
         except keycloak.exceptions.KeycloakGetError as exc:
             log.error(f"Failed to get user events: {exc.error_message}")

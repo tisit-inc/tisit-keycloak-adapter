@@ -31,3 +31,9 @@ class AuthUserError(Exception):
     """
     Raised when there was a problem fetching the user object
     """
+
+
+class AuthAdminConfigurationError(Exception):
+    """
+    Raised when admin-level Keycloak operations are requested but credentials are missing.
+    """

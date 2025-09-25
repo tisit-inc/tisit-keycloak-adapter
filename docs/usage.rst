@@ -216,6 +216,41 @@ This package provides a very simple dependency to retrieve the user object from 
     async def root(user: User = Depends(get_user)):
         return {"message": "Hello World"}
 
+
+Updating User Attributes With Admin Credentials
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When a client secret is configured, the adapter can bootstrap a Keycloak Admin client to
+update user attributes directly. The new :code:`KeycloakBackend.set_user_attribute` helper makes
+it easy to persist custom data (for example an avatar URL) in Keycloak:
+
+.. code-block:: python
+
+    backend = setup_keycloak(app, keycloak_config)
+
+    await backend.set_user_attribute(
+        user_id,
+        "avatar_url",
+        "https://cdn.example.com/avatars/9c86f6f6.webp",
+    )
+
+You can also pass a dictionary to set multiple attributes at once:
+
+.. code-block:: python
+
+    await backend.set_user_attribute(
+        user_id,
+        {
+            "avatar_url": "https://cdn.example.com/avatars/9c86f6f6.webp",
+            "avatar_ready": "true",
+        },
+    )
+
+Attributes are normalised to the format expected by Keycloak (string values become single-item
+lists, tuples and sets are converted to lists, and :code:`None` removes the attribute). The
+admin client is initialised lazily, so applications that do not configure a :code:`client_secret`
+continue to run without any additional overhead.
+
 This will return whatever was stored in the request either by the built-in function or your custom function to retrieve the user object.
 
 **Advanced Example**
