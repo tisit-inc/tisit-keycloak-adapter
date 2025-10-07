@@ -524,6 +524,14 @@ class KeycloakBackend(AuthenticationBackend):
         if not attributes:
             return True
 
+        # get current user data to preserve required fields like username
+        try:
+            user_data = await self._admin_call("get_user", user_id)
+        except keycloak.exceptions.KeycloakGetError as exc:
+            log.error(f"Failed to get user for attribute update: {exc.error_message}")
+            raise AuthKeycloakError from exc
+
+        # normalize attribute values to keycloak format
         normalized: dict[str, typing.Any] = {}
         for key, value in attributes.items():
             if value is None:
@@ -535,11 +543,14 @@ class KeycloakBackend(AuthenticationBackend):
             else:
                 normalized[key] = [str(value)]
 
-        payload = {"attributes": normalized}
+        # merge new attributes with existing ones
+        current_attributes = user_data.get("attributes", {})
+        current_attributes.update(normalized)
+        user_data["attributes"] = current_attributes
 
         try:
             await self._admin_call(
-                "update_user", user_id, payload=payload
+                "update_user", user_id, payload=user_data
             )
             return True
         except keycloak.exceptions.KeycloakPostError as exc:
