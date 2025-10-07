@@ -539,7 +539,7 @@ class KeycloakBackend(AuthenticationBackend):
 
         try:
             await self._admin_call(
-                "update_user", user_id, payload=payload, brief_representation=True
+                "update_user", user_id, payload=payload
             )
             return True
         except keycloak.exceptions.KeycloakPostError as exc:
